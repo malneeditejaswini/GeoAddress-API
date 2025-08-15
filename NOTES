@@ -1,0 +1,16 @@
+Setup Notes
+
+Install NuGet packages:
+dotnet add package Microsoft.EntityFrameworkCore
+dotnet add package Microsoft.EntityFrameworkCore.Sqlite
+dotnet add package Microsoft.Extensions.Http
+
+Configure in Startup.cs or Program.cs:
+
+builder.Services.AddDbContext<GeoContext>(opt => opt.UseSqlite("Data Source=geo.db"));
+builder.Services.AddHttpClient();
+builder.Services.AddControllers();
+
+Run migrations:
+dotnet ef migrations add InitialCreate
+dotnet ef database update
