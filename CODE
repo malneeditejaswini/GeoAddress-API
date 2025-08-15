@@ -1,0 +1,81 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading.Tasks;
+
+namespace GeoAddressAPI
+{
+    public class GeocodeRequest
+    {
+        public string Address { get; set; }
+    }
+
+    public class GeocodeResult
+    {
+        public int Id { get; set; }
+        public string Address { get; set; }
+        public string DisplayName { get; set; }
+        public string Lat { get; set; }
+        public string Lon { get; set; }
+        public DateTime RequestedAt { get; set; }
+    }
+
+    public class GeoContext : DbContext
+    {
+        public GeoContext(DbContextOptions<GeoContext> options) : base(options) { }
+        public DbSet<GeocodeResult> GeocodeResults { get; set; }
+    }
+
+    [ApiController]
+    [Route("api/[controller]")]
+    public class GeocodingController : ControllerBase
+    {
+        private readonly GeoContext _db;
+        private readonly HttpClient _httpClient;
+
+        public GeocodingController(GeoContext db, IHttpClientFactory httpClientFactory)
+        {
+            _db = db;
+            _httpClient = httpClientFactory.CreateClient();
+        }
+
+        [HttpPost("geocode")]
+        public async Task<IActionResult> Geocode([FromBody] GeocodeRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Address))
+                return BadRequest(new { error = "Address cannot be empty" });
+
+            try
+            {
+                var url = $"https://nominatim.openstreetmap.org/search?format=json&q={Uri.EscapeDataString(request.Address)}";
+                var response = await _httpClient.GetStringAsync(url);
+
+                var results = JsonSerializer.Deserialize<JsonElement[]>(response);
+                if (results.Length == 0)
+                    return NotFound(new { error = "Address not found" });
+
+                var firstResult = results[0];
+
+                var geocodeResult = new GeocodeResult
+                {
+                    Address = request.Address,
+                    DisplayName = firstResult.GetProperty("display_name").GetString(),
+                    Lat = firstResult.GetProperty("lat").GetString(),
+                    Lon = firstResult.GetProperty("lon").GetString(),
+                    RequestedAt = DateTime.UtcNow
+                };
+
+                _db.GeocodeResults.Add(geocodeResult);
+                await _db.SaveChangesAsync();
+
+                return Ok(geocodeResult);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
+        }
+    }
+}
