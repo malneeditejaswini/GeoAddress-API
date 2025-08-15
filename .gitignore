@@ -1,0 +1,27 @@
+## Ignore build artifacts
+bin/
+obj/
+
+## Ignore Visual Studio temporary files
+.vs/
+*.user
+*.suo
+
+## Ignore SQLite database files
+*.db
+*.db-shm
+*.db-wal
+
+## Ignore migrations backup files
+*Migrations/*.Designer.cs
+*Migrations/*Snapshot.cs
+
+## Ignore logs
+*.log
+
+## Ignore sensitive config (if any)
+appsettings.*.json
+
+## Ignore OS-specific files
+.DS_Store
+Thumbs.db
